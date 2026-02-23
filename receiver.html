@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Emergency Receiver</title>
+<style>
+body { font-family: Arial; background:#f2f2f2; padding:20px; }
+.container { max-width:700px; margin:auto; background:white; padding:20px; border-radius:10px; }
+h2 { text-align:center; }
+.realtime { margin-bottom:20px; min-height:80px; } /* blank muna sa start */
+.history { background:#e2e3e5; padding:15px; border-radius:10px; max-height:300px; overflow-y:auto; }
+.alert { background:#ff4d4d; color:white; padding:10px; margin-bottom:10px; border-radius:5px; cursor:pointer; }
+.alert:hover { opacity:0.8; }
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>🚨 Emergency Receiver</h2>
+
+<!-- Real-time alert box -->
+<div class="realtime" id="realtime"></div>
+
+<!-- History panel -->
+<h3>History</h3>
+<div class="history" id="history"></div>
+</div>
+
+<audio id="alarm">
+  <source src="https://cdn.pixabay.com/download/audio/2025/03/27/audio_3db17a732e.mp3?filename=jeremayjimenez-random-alarm-319318.mp3">
+</audio>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey:"AIzaSyCu9lEkk4tFRdfR2xGzIZsBJqcFofoumHU",
+  authDomain:"emergencyalert-9f63d.firebaseapp.com",
+  databaseURL:"https://emergencyalert-9f63d-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"emergencyalert-9f63d",
+  storageBucket:"emergencyalert-9f63d.firebasestorage.app",
+  messagingSenderId:"251232182440",
+  appId:"1:251232182440:web:e790d072c676de4766a29d"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const realtime = document.getElementById("realtime");
+const history = document.getElementById("history");
+
+// Load previous messages into history
+db.ref("emergencies").once("value", snap => {
+  snap.forEach(child => {
+    const d = child.val();
+    const item = document.createElement("div");
+    item.className = "alert";
+    item.innerHTML = `<b>${d.time}</b> - ${d.message}`;
+    
+    item.onclick = () => {
+      realtime.innerHTML = `<div class="alert">
+        <p><b>Time:</b> ${d.time}</p>
+        <p><b>Message:</b> ${d.message}</p>
+        <p><b>Needs:</b> ${d.needs}</p>
+      </div>`;
+    }
+    
+    history.prepend(item);
+  });
+});
+
+// Real-time listener
+db.ref("emergencies").on("child_added", snap => {
+  const d = snap.val();
+
+  realtime.innerHTML = `<div class="alert">
+    <p><b>Time:</b> ${d.time}</p>
+    <p><b>Message:</b> ${d.message}</p>
+    <p><b>Needs:</b> ${d.needs}</p>
+  </div>`;
+
+  const item = document.createElement("div");
+  item.className = "alert";
+  item.innerHTML = `<b>${d.time}</b> - ${d.message}`;
+  item.onclick = () => {
+    realtime.innerHTML = `<div class="alert">
+      <p><b>Time:</b> ${d.time}</p>
+      <p><b>Message:</b> ${d.message}</p>
+      <p><b>Needs:</b> ${d.needs}</p>
+    </div>`;
+  }
+  history.prepend(item);
+
+  document.getElementById("alarm").play();
+});
+
+// Optional: clear realtime alert after 10s if needed
+setInterval(()=>{ realtime.innerHTML = ""; }, 10000);
+
+
+
+/* ============================= */
+/* 🔊 ADDED EXTRA SOUND SUPPORT */
+/* ============================= */
+
+// Mas sure na tutunog sa mobile
+function playEmergencySound() {
+  const alarm = document.getElementById("alarm");
+  alarm.currentTime = 0;
+  alarm.play().catch(err => {
+    console.log("Autoplay blocked. Waiting for user interaction.");
+  });
+}
+
+// Extra trigger para sa bagong emergency
+firebase.database().ref("emergencies").on("child_added", function() {
+  playEmergencySound();
+});
+
+// Enable sound after first tap (important sa Android)
+document.body.addEventListener("click", function enableSound() {
+  const alarm = document.getElementById("alarm");
+  alarm.play().then(() => {
+    alarm.pause();
+    alarm.currentTime = 0;
+  }).catch(()=>{});
+}, { once: true });
+
+</script>
+
+</body>
+</html>
